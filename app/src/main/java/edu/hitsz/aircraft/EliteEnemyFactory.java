@@ -13,7 +13,8 @@ public class EliteEnemyFactory implements AircraftFactory {
 
     @Override
     public AbstractAircraft createAircraft(int locationX, int locationY) {
-        int baseSpeed = 25; // 基础速度
+        // 降低基础速度以适应 60fps 刷新率
+        int baseSpeed = 7; 
         int speedIncrement = game != null ? game.getEnemySpeedIncrement() : 0;
         return new EliteEnemy(locationX, locationY, 0, baseSpeed + speedIncrement, hp);
     }

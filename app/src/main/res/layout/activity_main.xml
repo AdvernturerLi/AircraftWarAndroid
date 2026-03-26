@@ -2,21 +2,30 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg"
     tools:context=".MainActivity">
 
+    <!-- Overlay to make text more readable -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#4D000000" />
+
     <TextView
         android:id="@+id/game_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="100dp"
+        android:layout_marginTop="80dp"
         android:text="@string/android"
-        android:textSize="30sp"
+        android:textColor="#FFD700"
+        android:textSize="40sp"
         android:textStyle="bold"
-        android:textColor="#FFFFFF"
+        android:shadowColor="#000000"
+        android:shadowDx="4"
+        android:shadowDy="4"
+        android:shadowRadius="8"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -25,6 +34,7 @@
         android:id="@+id/difficulty_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:gravity="center"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -32,53 +42,89 @@
         app:layout_constraintTop_toBottomOf="@+id/game_title"
         app:layout_constraintVertical_bias="0.3">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_easy"
-            android:layout_width="200dp"
-            android:layout_height="60dp"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
             android:layout_marginBottom="16dp"
-            android:text="@string/easy1" />
+            android:text="@string/easy1"
+            android:textSize="18sp"
+            app:cornerRadius="32dp"
+            app:backgroundTint="#4CAF50"/>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_normal"
-            android:layout_width="200dp"
-            android:layout_height="60dp"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
             android:layout_marginBottom="16dp"
-            android:text="@string/normal" />
+            android:text="@string/normal"
+            android:textSize="18sp"
+            app:cornerRadius="32dp"
+            app:backgroundTint="#2196F3"/>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_hard"
-            android:layout_width="200dp"
-            android:layout_height="60dp"
-            android:text="@string/hard" />
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="16dp"
+            android:text="@string/hard"
+            android:textSize="18sp"
+            app:cornerRadius="32dp"
+            app:backgroundTint="#F44336"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_rank"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="16dp"
+            android:text="查看排行榜"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            app:strokeColor="#FFFFFF"
+            app:strokeWidth="2dp"
+            app:cornerRadius="32dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_profile"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:text="个人档案"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            app:strokeColor="#FFFFFF"
+            app:strokeWidth="2dp"
+            app:cornerRadius="32dp" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginBottom="40dp"
+        android:background="#80000000"
         android:gravity="center"
         android:orientation="horizontal"
+        android:padding="12dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/difficulty_layout">
+        app:layout_constraintStart_toStartOf="parent">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
             android:text="@string/music"
             android:textColor="#FFFFFF"
             android:textSize="18sp" />
 
-        <com.google.android.material.materialswitch.MaterialSwitch
+        <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switch_music"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
-            android:contentDescription="@string/music_control"
-            tools:ignore="UseSwitchCompatPort" />
+            app:thumbTint="#FFD700"
+            app:trackTint="#FFFFFF"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -38,8 +38,9 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
 
     /**
      * 时间间隔(ms)，控制刷新频率
+     * 30ms 约为 33fps，改为 16ms 约为 60fps 提高流畅度
      */
-    private int timeInterval = 30;
+    private int timeInterval = 16;
 
     // SurfaceHolder
     private SurfaceHolder mSurfaceHolder;
@@ -72,7 +73,7 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     private int time = 0;
 
     private int spawnDuration = 960;
-    private int shootDuration = 420;
+    private int shootDuration = 416; // 调整为 timeInterval 的倍数 16 * 26 = 416
 
     private int bossScoreThreshold = 200;
     private final int bossadd = 100;
@@ -238,12 +239,12 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
         checkAndIncreaseDifficulty();
 
         // 1. 射击周期判断
-        if (time % shootDuration == 0) {
+        if (time % shootDuration < timeInterval && time >= shootDuration) {
             shootAction();
         }
 
         // 2. 敌机生成周期判断
-        if (time % spawnDuration == 0) {
+        if (time % spawnDuration < timeInterval && time >= spawnDuration) {
             if (enemyAircrafts.size() < enemyMaxNumber) {
                 enemyAircrafts.add(aircraftSpawner.spawnEnemy());
             }
@@ -282,7 +283,10 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
             if (isMusicEnabled) {
                 soundManager.playSound(SoundManager.GAME_OVER_PATH);
             }
-            // 这里可以触发 Activity 回调，处理得分和界面切换
+            // 触发 Activity 回调
+            if (gameHolder != null) {
+                gameHolder.onGameOver(score);
+            }
         }
     }
 
@@ -484,7 +488,7 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
 
     private void checkAndIncreaseDifficulty() {
         if (difficultyTemplate.shouldIncreaseDifficultyOverTime()) {
-            if (time > 0 && time % 30000 == 0) {
+            if (time > 0 && time % 30000 < timeInterval) {
                 enemySpeedIncrement++;
                 for (AbstractAircraft enemy : enemyAircrafts) {
                     enemy.increaseSpeed(1);

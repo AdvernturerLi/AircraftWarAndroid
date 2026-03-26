@@ -7,30 +7,30 @@ public class NormalDifficulty extends DifficultyTemplate {
 
     @Override
     protected void setEnemyMaxNumber() {
-        enemyMaxNumber = 8;  // 中等敌机数量
+        enemyMaxNumber = 6;  // 中等敌机数量
     }
 
     @Override
     protected void setHeroHp() {
-        heroHp = 1000;  // 中等生命值
+        heroHp = 800;  // 中等生命值
     }
 
     @Override
     protected void setShootDuration() {
-        shootDuration = 480;  // 中等射击频率
+        shootDuration = 416;  // 中等射击频率 (26 * 16ms)
     }
 
     @Override
     protected void setEnemyHp() {
-        mobEnemyHp = 30;      // 敌机生命值中等
-        eliteEnemyHp = 90;
+        mobEnemyHp = 40;      // 敌机生命值中等
+        eliteEnemyHp = 80;
         superEliteEnemyHp = 120;
-        bossEnemyHp = 280;
+        bossEnemyHp = 300;
     }
 
     @Override
     protected void setPropDuration() {
-        propDuration = 4000;  // 道具持续时间中等
+        propDuration = 5000;  // 道具持续时间中等
     }
 
     @Override

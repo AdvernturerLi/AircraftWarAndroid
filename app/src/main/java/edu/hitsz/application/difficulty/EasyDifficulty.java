@@ -7,30 +7,30 @@ public class EasyDifficulty extends DifficultyTemplate {
 
     @Override
     protected void setEnemyMaxNumber() {
-        enemyMaxNumber = 5;  // 较少的敌机数量
+        enemyMaxNumber = 4;  // 减少敌机数量，让屏幕不拥挤
     }
 
     @Override
     protected void setHeroHp() {
-        heroHp = 1500;  // 较高的生命值
+        heroHp = 1000;  // 适中的生命值
     }
 
     @Override
     protected void setShootDuration() {
-        shootDuration = 300;  // 较快的射击频率
+        shootDuration = 480;  // 较慢的射击频率 (30 * 16ms)
     }
 
     @Override
     protected void setEnemyHp() {
-        mobEnemyHp = 30;      // 敌机生命值较低
-        eliteEnemyHp = 60;
-        superEliteEnemyHp = 90;
-        bossEnemyHp = 240;
+        mobEnemyHp = 20;      // 敌机生命值极低，容易击落
+        eliteEnemyHp = 40;
+        superEliteEnemyHp = 60;
+        bossEnemyHp = 150;
     }
 
     @Override
     protected void setPropDuration() {
-        propDuration = 6000;  // 道具持续时间较长
+        propDuration = 8000;  // 道具持续时间很长
     }
 
     @Override

@@ -12,20 +12,22 @@ public class HardDifficulty extends DifficultyTemplate {
 
     @Override
     protected void setHeroHp() {
-        heroHp = 800;  // 较低的生命值
+        heroHp = 600;  // 较低的生命值，增加挑战
     }
 
     @Override
     protected void setShootDuration() {
-        shootDuration = 560;  // 较慢的射击频率
+        // 降低数值以增加射击频率 (数值越小，射击越快)
+        // 原本 560 太慢了，改为 360 以获得更好的战斗体验
+        shootDuration = 360;  
     }
 
     @Override
     protected void setEnemyHp() {
         mobEnemyHp = 60;      // 敌机生命值较高
-        eliteEnemyHp = 90;
-        superEliteEnemyHp = 120;
-        bossEnemyHp = 300;
+        eliteEnemyHp = 120;
+        superEliteEnemyHp = 180;
+        bossEnemyHp = 400;
     }
 
     @Override
@@ -38,4 +40,5 @@ public class HardDifficulty extends DifficultyTemplate {
         increaseDifficultyOverTime = true;   // 随时间增加难度
         bossHpIncrease = true;               // Boss生命值随次数增长
     }
+
 }
