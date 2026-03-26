@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Aircraft War Application</string>
+    <string name="easy">Easy</string>
+    <string name="textview">TextView</string>
+    <string name="button">Button</string>
+    <string name="android">飞机大战 Android 版</string>
+    <string name="normal">普通模式</string>
+    <string name="easy1">简单模式</string>
+    <string name="hard">困难模式</string>
+    <string name="music">音效开关：</string>
+    <string name="music_control">控制游戏音效开关</string>
+</resources>
