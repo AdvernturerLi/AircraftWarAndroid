@@ -17,13 +17,47 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="排行榜"
+        android:text="全球排行榜"
         android:textColor="#FFD700"
         android:textSize="32sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/toggle_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:checkedButton="@+id/btn_all_rank"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/rank_title"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_all_rank"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="总榜" />
+
+            <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_weekly_rank"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="周榜" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_local_rank"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="本地" />
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rank_list"
@@ -35,7 +69,7 @@
         app:layout_constraintBottom_toTopOf="@+id/button_layout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/rank_title" />
+        app:layout_constraintTop_toBottomOf="@+id/toggle_group" />
 
     <LinearLayout
         android:id="@+id/button_layout"
@@ -54,7 +88,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
-            android:text="清空记录"
+            android:text="清空本地"
             android:textColor="#FF5252" />
 
         <com.google.android.material.button.MaterialButton

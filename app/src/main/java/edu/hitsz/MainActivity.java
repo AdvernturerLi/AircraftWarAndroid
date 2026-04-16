@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.app.AlertDialog;
+import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 
 import edu.hitsz.application.Game;
 import edu.hitsz.application.SoundManager;
+import edu.hitsz.data.NetworkManager;
 import edu.hitsz.data.ScoreDao;
 import edu.hitsz.data.ScoreDaoImpl;
 import edu.hitsz.data.ScoreRecord;
@@ -24,11 +26,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean isMusicEnabled = true;
     private Game game;
     private ScoreDao scoreDao;
+    private NetworkManager networkManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         scoreDao = new ScoreDaoImpl(this);
+        networkManager = new NetworkManager();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -102,17 +106,22 @@ public class MainActivity extends AppCompatActivity {
                 .setTitle("游戏结束")
                 .setMessage("你的最终得分是: " + score)
                 .setView(editText)
-                .setPositiveButton("保存成绩", (dialog, which) -> {
+                .setPositiveButton("保存成绩并上传", (dialog, which) -> {
                     String userName = editText.getText().toString().trim();
                     if (userName.isEmpty()) {
                         userName = "匿名玩家";
                     }
-                    // 保存分数
-                    scoreDao.addScore(new ScoreRecord(userName, score, LocalDateTime.now()));
+                    ScoreRecord record = new ScoreRecord(userName, score, LocalDateTime.now());
+                    
+                    // 1. 保存到本地
+                    scoreDao.addScore(record);
+                    
+                    // 2. 上传到服务器
+                    uploadScoreToServer(record);
                     
                     // 跳转到排行榜
                     game = null;
-                    showMenu(); // 先切回菜单，防止返回时还是游戏界面
+                    showMenu();
                     Intent intent = new Intent(MainActivity.this, RankActivity.class);
                     startActivity(intent);
                 })
@@ -122,6 +131,20 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setCancelable(false)
                 .show();
+    }
+
+    private void uploadScoreToServer(ScoreRecord record) {
+        networkManager.uploadScore(record, new NetworkManager.OnResponseListener<String>() {
+            @Override
+            public void onSuccess(String data) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "云端同步成功", Toast.LENGTH_SHORT).show());
+            }
+
+            @Override
+            public void onFailure(String error) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "云端同步失败: " + error, Toast.LENGTH_SHORT).show());
+            }
+        });
     }
 
     @Override
