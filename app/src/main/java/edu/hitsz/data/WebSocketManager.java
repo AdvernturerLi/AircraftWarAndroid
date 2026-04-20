@@ -10,7 +10,7 @@ import okhttp3.WebSocketListener;
 
 public class WebSocketManager {
     // 使用你内网穿透的域名，注意协议是 ws:// 或 wss://
-    private static final String WS_URL = "ws://5d700464.r23.cpolar.top/ws/game";
+    private static final String WS_URL = Config.WS_URL;
     private final OkHttpClient client = new OkHttpClient();
     private WebSocket webSocket;
     private final Gson gson = new Gson();

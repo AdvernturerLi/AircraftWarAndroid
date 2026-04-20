@@ -15,7 +15,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class NetworkManager {
-    private static final String BASE_URL = "http://5d700464.r23.cpolar.top/api/rank";
+    private static final String BASE_URL = Config.BASE_URL;
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
