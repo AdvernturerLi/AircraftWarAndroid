@@ -29,7 +29,7 @@
         android:id="@+id/toggle_group"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         app:checkedButton="@+id/btn_all_rank"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:text="总榜" />
 
-            <com.google.android.material.button.MaterialButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_weekly_rank"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="wrap_content"
@@ -56,7 +56,51 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="本地" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
 
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/difficulty_toggle_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        app:checkedButton="@+id/btn_diff_all"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/toggle_group"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_diff_all"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="全部"
+            android:padding="0dp"
+            android:minWidth="60dp"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_diff_easy"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="简单"
+            android:padding="0dp"
+            android:minWidth="60dp"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_diff_normal"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="普通"
+            android:padding="0dp"
+            android:minWidth="60dp"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_diff_hard"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="困难"
+            android:padding="0dp"
+            android:minWidth="60dp"/>
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -69,7 +113,7 @@
         app:layout_constraintBottom_toTopOf="@+id/button_layout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/toggle_group" />
+        app:layout_constraintTop_toBottomOf="@+id/difficulty_toggle_group" />
 
     <LinearLayout
         android:id="@+id/button_layout"

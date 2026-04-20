@@ -12,13 +12,15 @@ import edu.hitsz.data.ScoreDao;
 import edu.hitsz.data.ScoreDaoImpl;
 import edu.hitsz.data.ScoreRecord;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class RankActivity extends AppCompatActivity {
 
     private ScoreDao scoreDao;
     private RankAdapter adapter;
     private NetworkManager networkManager;
-    private String currentType = "local";
+    private String currentType = "all";
+    private int currentDifficulty = 0; // 0: 全部, 1: Easy, 2: Normal, 3: Hard
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,48 +34,47 @@ public class RankActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         
         adapter = new RankAdapter(scoreDao.getAllScores());
-        adapter.setOnItemDeleteListener((record, position) -> {
-            // 执行删除逻辑
-            deleteScoreRecord(record);
-        });
+        adapter.setOnItemDeleteListener((record, position) -> deleteScoreRecord(record));
         recyclerView.setAdapter(adapter);
 
+        // 类型切换 (总榜/周榜/本地)
         MaterialButtonToggleGroup toggleGroup = findViewById(R.id.toggle_group);
         toggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
-                if (checkedId == R.id.btn_all_rank) {
-                    currentType = "all";
-                    fetchGlobalRank("all");
-                } else if (checkedId == R.id.btn_weekly_rank) {
-                    currentType = "weekly";
-                    fetchGlobalRank("weekly");
-                } else if (checkedId == R.id.btn_local_rank) {
-                    currentType = "local";
-                    adapter.updateData(scoreDao.getAllScores());
-                }
+                if (checkedId == R.id.btn_all_rank) currentType = "all";
+                else if (checkedId == R.id.btn_weekly_rank) currentType = "weekly";
+                else if (checkedId == R.id.btn_local_rank) currentType = "local";
+                refreshCurrentList();
+            }
+        });
+
+        // 难度切换
+        MaterialButtonToggleGroup difficultyGroup = findViewById(R.id.difficulty_toggle_group);
+        difficultyGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (isChecked) {
+                if (checkedId == R.id.btn_diff_all) currentDifficulty = 0;
+                else if (checkedId == R.id.btn_diff_easy) currentDifficulty = 1;
+                else if (checkedId == R.id.btn_diff_normal) currentDifficulty = 2;
+                else if (checkedId == R.id.btn_diff_hard) currentDifficulty = 3;
+                refreshCurrentList();
             }
         });
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
         findViewById(R.id.btn_clear).setOnClickListener(v -> {
             scoreDao.clearScores();
-            if ("local".equals(currentType)) {
-                adapter.updateData(scoreDao.getAllScores());
-            }
+            refreshCurrentList();
             Toast.makeText(this, "本地记录已清空", Toast.LENGTH_SHORT).show();
         });
     }
 
     private void deleteScoreRecord(ScoreRecord record) {
-        // 1. 从本地删除
         scoreDao.removeScore(record);
-        
-        // 2. 从云端删除
         networkManager.deleteScore(record, new NetworkManager.OnResponseListener<String>() {
             @Override
             public void onSuccess(String data) {
                 runOnUiThread(() -> {
-                    Toast.makeText(RankActivity.this, "云端同步删除成功", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(RankActivity.this, "已同步云端删除", Toast.LENGTH_SHORT).show();
                     refreshCurrentList();
                 });
             }
@@ -90,14 +91,20 @@ public class RankActivity extends AppCompatActivity {
 
     private void refreshCurrentList() {
         if ("local".equals(currentType)) {
-            adapter.updateData(scoreDao.getAllScores());
+            List<ScoreRecord> localScores = scoreDao.getAllScores();
+            if (currentDifficulty != 0) {
+                localScores = localScores.stream()
+                        .filter(s -> s.getDifficulty() == currentDifficulty)
+                        .collect(Collectors.toList());
+            }
+            adapter.updateData(localScores);
         } else {
-            fetchGlobalRank(currentType);
+            fetchGlobalRank(currentType, currentDifficulty);
         }
     }
 
-    private void fetchGlobalRank(String type) {
-        networkManager.getRankList(type, new NetworkManager.OnResponseListener<List<ScoreRecord>>() {
+    private void fetchGlobalRank(String type, int difficulty) {
+        networkManager.getRankList(type, difficulty, new NetworkManager.OnResponseListener<List<ScoreRecord>>() {
             @Override
             public void onSuccess(List<ScoreRecord> data) {
                 runOnUiThread(() -> adapter.updateData(data));

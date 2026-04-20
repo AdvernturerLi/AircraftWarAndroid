@@ -19,6 +19,7 @@ import edu.hitsz.application.difficulty.HardDifficulty;
 import edu.hitsz.application.difficulty.NormalDifficulty;
 import edu.hitsz.bullet.BaseBullet;
 import edu.hitsz.basic.AbstractFlyingObject;
+import edu.hitsz.data.WebSocketManager;
 import edu.hitsz.prop.*;
 import edu.hitsz.data.ScoreDao;
 
@@ -96,13 +97,25 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
 
     private boolean isMusicEnabled;
 
-    public Game(Context context, int difficulty, ScoreDao scoreDao, SoundManager soundManager, boolean isMusicEnabled) {
+    // --- 联机对战新增变量 ---
+    private boolean isMultiplayer;
+    private WebSocketManager wsManager;
+    private int opponentScore = 0;
+    private boolean isOpponentDead = false;
+    private String opponentName = "等待匹配...";
+    private int lastSentScore = -1;
+    private boolean hasSentDead = false;
+
+    public Game(Context context, int difficulty, ScoreDao scoreDao, SoundManager soundManager, 
+                boolean isMusicEnabled, boolean isMultiplayer, WebSocketManager wsManager) {
         super(context);
         this.context = context;
         this.difficulty = difficulty;
         this.soundManager = soundManager;
         this.scoreDao = scoreDao;
         this.isMusicEnabled = isMusicEnabled;
+        this.isMultiplayer = isMultiplayer;
+        this.wsManager = wsManager;
 
         // 初始化 SurfaceHolder 和 Callback
         mSurfaceHolder = getHolder();
@@ -149,11 +162,44 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
         this.heroBullets = new CopyOnWriteArrayList<>();
         this.enemyBullets = new CopyOnWriteArrayList<>();
         this.props = new CopyOnWriteArrayList<>();
+
+        // 如果是联机模式，设置对手数据监听
+        if (isMultiplayer && wsManager != null) {
+            wsManager.setOnMessageListener(new WebSocketManager.OnMessageListener() {
+                @Override
+                public void onMatchFound(String opponentName) {
+                    Game.this.opponentName = opponentName;
+                }
+
+                @Override
+                public void onRealStart() {
+                    // 已经在进入 Game 前确认过，此处通常不需要额外逻辑
+                }
+
+                @Override
+                public void onOpponentScore(int score) {
+                    opponentScore = score;
+                }
+
+                @Override
+                public void onOpponentDead() {
+                    isOpponentDead = true;
+                }
+
+                @Override
+                public void onGameOver(int p1Score, int p2Score) {
+                    // 只有在联机结束时才真正停止游戏循环
+                    gameOverFlag = true;
+                    isRunning = false;
+                }
+            });
+        }
     }
 
     // 定义游戏监听器接口
     public interface GameHolder {
         void onGameOver(int score);
+        void onMultiplayerGameOver(int myScore, int opponentScore);
     }
 
     private GameHolder gameHolder;
@@ -226,9 +272,38 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
                 }
             }
         }
+        
+        // 游戏循环结束后，触发最终回调
+        if (gameHolder != null) {
+            if (isMultiplayer) {
+                gameHolder.onMultiplayerGameOver(score, opponentScore);
+            } else {
+                gameHolder.onGameOver(score);
+            }
+        }
     }
 
     private void action() {
+        if (heroAircraft.getHp() <= 0) {
+            if (!isMultiplayer) {
+                gameOverFlag = true;
+                isRunning = false;
+            } else if (!hasSentDead) {
+                // 联机模式下，自己死了要通知对方，但画面继续渲染直到对方也死
+                hasSentDead = true;
+                if (wsManager != null) wsManager.sendDead();
+            }
+            // 英雄机阵亡后停止所有背景音效
+            soundManager.stopAll();
+            return;
+        }
+
+        // 联机模式实时同步分数
+        if (isMultiplayer && wsManager != null && score != lastSentScore) {
+            lastSentScore = score;
+            wsManager.sendScore(score);
+        }
+
         // 安全检查：如果道具时间已过但策略未恢复
         if (propEndTime > 0 && System.currentTimeMillis() > propEndTime) {
             heroAircraft.setShootStrategy(new StraightShoot());
@@ -272,22 +347,6 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
         crashCheckAction();
         propsMoveAction();
         postProcessAction();
-
-        // 游戏结束检查
-        if (heroAircraft.getHp() <= 0) {
-            gameOverFlag = true;
-            isRunning = false;
-            heroAircraft.setShootStrategy(new StraightShoot());
-            propEndTime = 0;
-            soundManager.stopAll();
-            if (isMusicEnabled) {
-                soundManager.playSound(SoundManager.GAME_OVER_PATH);
-            }
-            // 触发 Activity 回调
-            if (gameHolder != null) {
-                gameHolder.onGameOver(score);
-            }
-        }
     }
 
     private void draw() {
@@ -300,20 +359,32 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
                 // 绘制背景
                 drawBackground(canvas);
 
-                // 绘制子弹
-                paintImageWithPositionRevised(canvas, enemyBullets);
-                paintImageWithPositionRevised(canvas, heroBullets);
+                if (heroAircraft.getHp() <= 0 && isMultiplayer && !gameOverFlag) {
+                    // 自己死了，对手还在玩
+                    mPaint.setColor(Color.WHITE);
+                    mPaint.setTextSize(80);
+                    mPaint.setTextAlign(Paint.Align.CENTER);
+                    canvas.drawText("GAME OVER", screenWidth / 2, screenHeight / 2 - 100, mPaint);
+                    mPaint.setTextSize(50);
+                    canvas.drawText("等待对方结束游戏...", screenWidth / 2, screenHeight / 2 + 50, mPaint);
+                    mPaint.setTextAlign(Paint.Align.LEFT); // 重置 Align 防止影响其他文字
+                } else {
+                    // 绘制子弹
+                    paintImageWithPositionRevised(canvas, enemyBullets);
+                    paintImageWithPositionRevised(canvas, heroBullets);
 
-                // 绘制敌机和道具
-                paintImageWithPositionRevised(canvas, enemyAircrafts);
-                paintImageWithPositionRevised(canvas, props);
+                    // 绘制敌机和道具
+                    paintImageWithPositionRevised(canvas, enemyAircrafts);
+                    paintImageWithPositionRevised(canvas, props);
 
-                // 绘制英雄机
-                Bitmap heroBitmap = ImageManager.HERO_IMAGE;
-                canvas.drawBitmap(heroBitmap,
-                        (float) (heroAircraft.getLocationX() - heroBitmap.getWidth() / 2.0),
-                        (float) (heroAircraft.getLocationY() - heroBitmap.getHeight() / 2.0), mPaint);
-
+                    // 绘制英雄机
+                    if (heroAircraft.getHp() > 0) {
+                        Bitmap heroBitmap = ImageManager.HERO_IMAGE;
+                        canvas.drawBitmap(heroBitmap,
+                                (float) (heroAircraft.getLocationX() - heroBitmap.getWidth() / 2.0),
+                                (float) (heroAircraft.getLocationY() - heroBitmap.getHeight() / 2.0), mPaint);
+                    }
+                }
                 // 绘制得分和生命值
                 paintScoreAndLife(canvas);
 
@@ -356,11 +427,25 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     private void paintScoreAndLife(Canvas canvas) {
         int x = 50;
         int y = 100;
-        mPaint.setColor(Color.RED);
         mPaint.setTextSize(60);
+        
+        // 绘制自己的信息
+        mPaint.setColor(Color.RED);
         canvas.drawText("SCORE:" + this.score, x, y, mPaint);
         y += 70;
-        canvas.drawText("LIFE:" + this.heroAircraft.getHp(), x, y, mPaint);
+        canvas.drawText("LIFE:" + Math.max(0, this.heroAircraft.getHp()), x, y, mPaint);
+        
+        // 联机模式绘制对手信息
+        if (isMultiplayer) {
+            y += 100;
+            mPaint.setColor(Color.BLUE);
+            canvas.drawText("OPPONENT: " + opponentScore, x, y, mPaint);
+            if (isOpponentDead) {
+                y += 70;
+                mPaint.setColor(Color.GRAY);
+                canvas.drawText("OPPONENT DIED", x, y, mPaint);
+            }
+        }
     }
 
     // --- 游戏逻辑方法 ---
@@ -371,9 +456,11 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
                 enemyBullets.addAll(enemyAircraft.shoot());
             }
         }
-        heroBullets.addAll(heroAircraft.shoot());
-        if (isMusicEnabled) {
-            soundManager.playSound(SoundManager.BULLET_PATH);
+        if (heroAircraft.getHp() > 0) {
+            heroBullets.addAll(heroAircraft.shoot());
+            if (isMusicEnabled) {
+                soundManager.playSound(SoundManager.BULLET_PATH);
+            }
         }
     }
 
@@ -414,6 +501,7 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     }
 
     private void crashCheckAction() {
+        if (heroAircraft.getHp() <= 0) return;
         for (BaseBullet bullet : enemyBullets) {
             if (bullet.notValid()) continue;
             if (heroAircraft.crash(bullet)) {

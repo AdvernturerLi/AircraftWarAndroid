@@ -6,9 +6,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
-/**
- * 排行榜数值对象实体类
- */
 public class ScoreRecord implements Serializable, Comparable<ScoreRecord> {
     @SerializedName("username")
     private final String userName;
@@ -19,22 +16,22 @@ public class ScoreRecord implements Serializable, Comparable<ScoreRecord> {
     @SerializedName("timestamp")
     private final long timestamp;
 
+    @SerializedName("difficulty")
+    private final int difficulty; // 1: Easy, 2: Normal, 3: Hard
+
     private transient LocalDateTime recordTime;
 
-    public ScoreRecord(String userName, int score, LocalDateTime recordTime) {
+    public ScoreRecord(String userName, int score, LocalDateTime recordTime, int difficulty) {
         this.userName = userName;
         this.score = score;
         this.recordTime = recordTime;
         this.timestamp = recordTime.toEpochSecond(ZoneOffset.of("+8"));
+        this.difficulty = difficulty;
     }
 
-    public String getUserName() {
-        return userName;
-    }
-
-    public int getScore() {
-        return score;
-    }
+    public String getUserName() { return userName; }
+    public int getScore() { return score; }
+    public int getDifficulty() { return difficulty; }
 
     public LocalDateTime getRecordTime() {
         if (recordTime == null) {

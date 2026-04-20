@@ -15,7 +15,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class NetworkManager {
-    private static final String BASE_URL = "http://41942dae.r8.cpolar.cn/api/rank";
+    private static final String BASE_URL = "http://5d700464.r23.cpolar.top/api/rank";
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     private final OkHttpClient client = new OkHttpClient();
     private final Gson gson = new Gson();
@@ -50,9 +50,14 @@ public class NetworkManager {
         });
     }
 
-    public void getRankList(String type, OnResponseListener<List<ScoreRecord>> listener) {
+    /**
+     * 获取排行榜
+     * @param type "all" 或 "weekly"
+     * @param difficulty 0: 全部, 1: 简单, 2: 普通, 3: 困难
+     */
+    public void getRankList(String type, int difficulty, OnResponseListener<List<ScoreRecord>> listener) {
         Request request = new Request.Builder()
-                .url(BASE_URL + "/list?type=" + type)
+                .url(BASE_URL + "/list?type=" + type + "&difficulty=" + difficulty)
                 .get()
                 .build();
 
@@ -75,9 +80,6 @@ public class NetworkManager {
         });
     }
 
-    /**
-     * 删除指定记录
-     */
     public void deleteScore(ScoreRecord record, OnResponseListener<String> listener) {
         String json = gson.toJson(record);
         RequestBody body = RequestBody.create(json, JSON);

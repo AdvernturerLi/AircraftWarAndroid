@@ -79,7 +79,8 @@ public class ScoreDaoImpl implements ScoreDao {
             for (ScoreRecord record : this.scoreRecords) {
                 String line = record.getUserName() + "," +
                         record.getScore() + "," +
-                        record.getRecordTime().format(formatter);
+                        record.getRecordTime().format(formatter) + "," +
+                        record.getDifficulty();
                 writer.write(line);
                 writer.newLine();
             }
@@ -96,12 +97,16 @@ public class ScoreDaoImpl implements ScoreDao {
                 while ((line = reader.readLine()) != null) {
                     if (line.trim().isEmpty()) continue;
                     String[] parts = line.split(",");
-                    if (parts.length == 3) {
+                    if (parts.length >= 3) {
                         try {
                             String userName = parts[0];
                             int score = Integer.parseInt(parts[1].trim());
                             LocalDateTime recordTime = LocalDateTime.parse(parts[2].trim(), formatter);
-                            loadedList.add(new ScoreRecord(userName, score, recordTime));
+                            int difficulty = 0; // Default or legacy
+                            if (parts.length >= 4) {
+                                difficulty = Integer.parseInt(parts[3].trim());
+                            }
+                            loadedList.add(new ScoreRecord(userName, score, recordTime, difficulty));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

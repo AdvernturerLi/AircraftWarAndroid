@@ -1,10 +1,15 @@
 package edu.hitsz;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.View;
 import android.widget.EditText;
 import android.app.AlertDialog;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -19,6 +24,7 @@ import edu.hitsz.data.NetworkManager;
 import edu.hitsz.data.ScoreDao;
 import edu.hitsz.data.ScoreDaoImpl;
 import edu.hitsz.data.ScoreRecord;
+import edu.hitsz.data.WebSocketManager;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -27,22 +33,34 @@ public class MainActivity extends AppCompatActivity {
     private Game game;
     private ScoreDao scoreDao;
     private NetworkManager networkManager;
+    private WebSocketManager wsManager;
+    private int currentDifficulty = 1;
+    private boolean isMultiplayer = false;
+
+    // UI Elements
+    private LinearLayout modeLayout;
+    private LinearLayout difficultyLayout;
+    private TextView tvModeSelected;
+    private ProgressDialog matchDialog;
+    private AlertDialog matchConfirmDialog;
+
+    private final Handler timeoutHandler = new Handler(Looper.getMainLooper());
+    private Runnable timeoutRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         scoreDao = new ScoreDaoImpl(this);
         networkManager = new NetworkManager();
+        wsManager = new WebSocketManager();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 if (game != null) {
-                    if (soundManager != null) {
-                        soundManager.stopAll();
-                    }
-                    game = null;
-                    showMenu();
+                    gameStop();
+                } else if (difficultyLayout != null && difficultyLayout.getVisibility() == View.VISIBLE) {
+                    showModeSelection();
                 } else {
                     finish();
                 }
@@ -54,97 +72,201 @@ public class MainActivity extends AppCompatActivity {
 
     private void showMenu() {
         setContentView(R.layout.activity_main);
-
         soundManager = new SoundManager(this);
-        Button btnEasy = findViewById(R.id.btn_easy);
-        Button btnNormal = findViewById(R.id.btn_normal);
-        Button btnHard = findViewById(R.id.btn_hard);
-        Button btnRank = findViewById(R.id.btn_rank);
-        Button btnProfile = findViewById(R.id.btn_profile);
+
+        modeLayout = findViewById(R.id.mode_layout);
+        difficultyLayout = findViewById(R.id.difficulty_layout);
+        tvModeSelected = findViewById(R.id.tv_mode_selected);
+
+        findViewById(R.id.btn_single_player).setOnClickListener(v -> {
+            isMultiplayer = false;
+            showDifficultySelection("模式：单人模式");
+        });
+
+        findViewById(R.id.btn_multi_player).setOnClickListener(v -> {
+            isMultiplayer = true;
+            showDifficultySelection("模式：联机对战");
+        });
+
+        findViewById(R.id.btn_easy).setOnClickListener(v -> prepareStart(1));
+        findViewById(R.id.btn_normal).setOnClickListener(v -> prepareStart(2));
+        findViewById(R.id.btn_hard).setOnClickListener(v -> prepareStart(3));
+        findViewById(R.id.btn_back_to_mode).setOnClickListener(v -> showModeSelection());
+
+        findViewById(R.id.btn_rank).setOnClickListener(v -> startActivity(new Intent(MainActivity.this, RankActivity.class)));
+        findViewById(R.id.btn_profile).setOnClickListener(v -> startActivity(new Intent(MainActivity.this, ProfileActivity.class)));
+
         SwitchCompat switchMusic = findViewById(R.id.switch_music);
-
         switchMusic.setChecked(isMusicEnabled);
-        switchMusic.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            isMusicEnabled = isChecked;
-        });
-
-        btnEasy.setOnClickListener(v -> startGame(1));
-        btnNormal.setOnClickListener(v -> startGame(2));
-        btnHard.setOnClickListener(v -> startGame(3));
-        btnRank.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, RankActivity.class);
-            startActivity(intent);
-        });
-        btnProfile.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, ProfileActivity.class);
-            startActivity(intent);
-        });
+        switchMusic.setOnCheckedChangeListener((buttonView, isChecked) -> isMusicEnabled = isChecked);
     }
 
-    private void startGame(int difficulty) {
-        game = new Game(this, difficulty, scoreDao, soundManager, isMusicEnabled);
+    private void showDifficultySelection(String modeTitle) {
+        modeLayout.setVisibility(View.GONE);
+        difficultyLayout.setVisibility(View.VISIBLE);
+        tvModeSelected.setText(modeTitle);
+    }
 
-        game.setOnGameOverListener(score -> {
-            runOnUiThread(() -> {
-                if (soundManager != null) soundManager.stopAll();
-                showScoreDialog(score);
-            });
-        });
+    private void showModeSelection() {
+        difficultyLayout.setVisibility(View.GONE);
+        modeLayout.setVisibility(View.VISIBLE);
+    }
 
-        setContentView(game);
-
-        if (isMusicEnabled) {
-            soundManager.playBgm();
+    private void prepareStart(int difficulty) {
+        currentDifficulty = difficulty;
+        if (isMultiplayer) {
+            startMatchmaking();
+        } else {
+            startGame(difficulty);
         }
     }
 
-    private void showScoreDialog(int score) {
-        final EditText editText = new EditText(this);
-        editText.setHint("输入你的名字");
-        
-        new AlertDialog.Builder(this)
-                .setTitle("游戏结束")
-                .setMessage("你的最终得分是: " + score)
-                .setView(editText)
-                .setPositiveButton("保存成绩并上传", (dialog, which) -> {
-                    String userName = editText.getText().toString().trim();
-                    if (userName.isEmpty()) {
-                        userName = "匿名玩家";
+    private void startMatchmaking() {
+        matchDialog = new ProgressDialog(this);
+        matchDialog.setMessage("正在匹配对手中，请稍候...");
+        matchDialog.setCancelable(true);
+        matchDialog.setOnCancelListener(dialog -> {
+            timeoutHandler.removeCallbacks(timeoutRunnable);
+            if (wsManager != null) wsManager.close();
+        });
+        matchDialog.show();
+
+        timeoutRunnable = () -> {
+            if (matchDialog != null && matchDialog.isShowing()) {
+                matchDialog.dismiss();
+                wsManager.close();
+                Toast.makeText(this, "匹配超时，请稍后再试", Toast.LENGTH_LONG).show();
+            }
+        };
+        timeoutHandler.postDelayed(timeoutRunnable, 15000);
+
+        String myName = scoreDao.getAllScores().isEmpty() ? "新晋飞行员" : scoreDao.getAllScores().get(0).getUserName();
+        wsManager.connect(currentDifficulty, myName);
+
+        wsManager.setOnMessageListener(new WebSocketManager.OnMessageListener() {
+            @Override
+            public void onMatchFound(String opponentName) {
+                runOnUiThread(() -> {
+                    timeoutHandler.removeCallbacks(timeoutRunnable);
+                    if (matchDialog != null && matchDialog.isShowing()) {
+                        matchDialog.dismiss();
                     }
-                    ScoreRecord record = new ScoreRecord(userName, score, LocalDateTime.now());
-                    
-                    // 1. 保存到本地
-                    scoreDao.addScore(record);
-                    
-                    // 2. 上传到服务器
-                    uploadScoreToServer(record);
-                    
-                    // 跳转到排行榜
-                    game = null;
-                    showMenu();
-                    Intent intent = new Intent(MainActivity.this, RankActivity.class);
-                    startActivity(intent);
-                })
-                .setNegativeButton("取消", (dialog, which) -> {
-                    game = null;
-                    showMenu();
+                    showMatchConfirmDialog(opponentName);
+                });
+            }
+
+            @Override
+            public void onRealStart() {
+                runOnUiThread(() -> {
+                    if (matchConfirmDialog != null && matchConfirmDialog.isShowing()) {
+                        matchConfirmDialog.dismiss();
+                    }
+                    startGame(currentDifficulty);
+                });
+            }
+
+            @Override public void onOpponentScore(int score) {}
+            @Override public void onOpponentDead() {}
+            @Override public void onGameOver(int p1Score, int p2Score) {}
+        });
+    }
+
+    private void showMatchConfirmDialog(String opponentName) {
+        matchConfirmDialog = new AlertDialog.Builder(this)
+                .setTitle("匹配成功！")
+                .setMessage("对手：" + opponentName + "\n点击开战进入准备状态")
+                .setPositiveButton("开战！", null)
+                .setNegativeButton("退出", (dialog, which) -> wsManager.close())
+                .setCancelable(false)
+                .create();
+
+        matchConfirmDialog.show();
+
+        matchConfirmDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            wsManager.sendReady();
+            matchConfirmDialog.setMessage("已准备，等待对方确认...");
+            v.setEnabled(false);
+        });
+    }
+
+    private String getDiffName(int diff) {
+        if (diff == 1) return "简单";
+        if (diff == 3) return "困难";
+        return "普通";
+    }
+
+    private void startGame(int difficulty) {
+        game = new Game(this, difficulty, scoreDao, soundManager, isMusicEnabled, isMultiplayer, wsManager);
+
+        game.setOnGameOverListener(new Game.GameHolder() {
+            @Override
+            public void onGameOver(int score) {
+                runOnUiThread(() -> {
+                    gameStop();
+                    showScoreDialog(score);
+                });
+            }
+
+            @Override
+            public void onMultiplayerGameOver(int myScore, int opponentScore) {
+                runOnUiThread(() -> {
+                    gameStop();
+                    showMultiplayerResult(myScore, opponentScore);
+                });
+            }
+        });
+
+        setContentView(game);
+        if (isMusicEnabled) soundManager.playBgm();
+    }
+
+    private void gameStop() {
+        if (soundManager != null) soundManager.stopAll();
+        game = null;
+        showMenu();
+    }
+
+    private void showMultiplayerResult(int myScore, int opponentScore) {
+        String result = myScore > opponentScore ? "你赢了！" : (myScore < opponentScore ? "你输了..." : "平局！");
+        new AlertDialog.Builder(this)
+                .setTitle("对战结束")
+                .setMessage(result + "\n你的分数: " + myScore + "\n对手分数: " + opponentScore)
+                .setPositiveButton("确定", (dialog, which) -> {
+                    if (wsManager != null) wsManager.close();
+                    showScoreDialog(myScore);
                 })
                 .setCancelable(false)
                 .show();
     }
 
-    private void uploadScoreToServer(ScoreRecord record) {
-        networkManager.uploadScore(record, new NetworkManager.OnResponseListener<String>() {
-            @Override
-            public void onSuccess(String data) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "云端同步成功", Toast.LENGTH_SHORT).show());
-            }
+    private void showScoreDialog(int score) {
+        final EditText editText = new EditText(this);
+        editText.setHint("输入你的名字");
 
-            @Override
-            public void onFailure(String error) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "云端同步失败: " + error, Toast.LENGTH_SHORT).show());
-            }
-        });
+        new AlertDialog.Builder(this)
+                .setTitle("保存成绩")
+                .setMessage("你的得分: " + score)
+                .setView(editText)
+                .setPositiveButton("保存并上传", (dialog, which) -> {
+                    String userName = editText.getText().toString().trim();
+                    if (userName.isEmpty()) userName = "匿名玩家";
+                    ScoreRecord record = new ScoreRecord(userName, score, LocalDateTime.now(), currentDifficulty);
+                    scoreDao.addScore(record);
+                    networkManager.uploadScore(record, new NetworkManager.OnResponseListener<String>() {
+                        @Override
+                        public void onSuccess(String data) {
+                            runOnUiThread(() -> Toast.makeText(MainActivity.this, "云端同步成功", Toast.LENGTH_SHORT).show());
+                        }
+                        @Override
+                        public void onFailure(String error) {
+                            runOnUiThread(() -> Toast.makeText(MainActivity.this, "云端同步失败: " + error, Toast.LENGTH_SHORT).show());
+                        }
+                    });
+                    startActivity(new Intent(MainActivity.this, RankActivity.class));
+                })
+                .setNegativeButton("返回菜单", (dialog, which) -> {})
+                .setCancelable(false)
+                .show();
     }
 
     @Override
@@ -154,18 +276,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (game != null && isMusicEnabled && soundManager != null) {
-            soundManager.playBgm();
-        }
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (soundManager != null) {
-            soundManager.release();
-        }
+        timeoutHandler.removeCallbacks(timeoutRunnable);
+        if (wsManager != null) wsManager.close();
+        if (soundManager != null) soundManager.release();
     }
 }

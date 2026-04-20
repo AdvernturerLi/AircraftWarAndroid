@@ -7,7 +7,6 @@
     android:background="@drawable/bg"
     tools:context=".MainActivity">
 
-    <!-- Overlay to make text more readable -->
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -21,10 +20,6 @@
         android:layout_marginStart="24dp"
         android:layout_marginEnd="24dp"
         android:gravity="center"
-        android:shadowColor="#000000"
-        android:shadowDx="4"
-        android:shadowDy="4"
-        android:shadowRadius="8"
         android:text="@string/android"
         android:textColor="#FFD700"
         android:textSize="28sp"
@@ -33,12 +28,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- 模式选择面板 -->
     <LinearLayout
-        android:id="@+id/difficulty_layout"
+        android:id="@+id/mode_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
+        android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -46,34 +43,24 @@
         app:layout_constraintVertical_bias="0.3">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_easy"
+            android:id="@+id/btn_single_player"
             android:layout_width="240dp"
             android:layout_height="64dp"
             android:layout_marginBottom="16dp"
-            android:text="@string/easy1"
+            android:text="单人模式"
             android:textSize="18sp"
             app:cornerRadius="32dp"
             app:backgroundTint="#4CAF50"/>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_normal"
+            android:id="@+id/btn_multi_player"
             android:layout_width="240dp"
             android:layout_height="64dp"
             android:layout_marginBottom="16dp"
-            android:text="@string/normal"
+            android:text="联机对战"
             android:textSize="18sp"
             app:cornerRadius="32dp"
-            app:backgroundTint="#2196F3"/>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_hard"
-            android:layout_width="240dp"
-            android:layout_height="64dp"
-            android:layout_marginBottom="16dp"
-            android:text="@string/hard"
-            android:textSize="18sp"
-            app:cornerRadius="32dp"
-            app:backgroundTint="#F44336"/>
+            app:backgroundTint="#FF9800"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_rank"
@@ -81,11 +68,9 @@
             android:layout_width="240dp"
             android:layout_height="64dp"
             android:layout_marginBottom="16dp"
-            android:text="查看排行榜"
+            android:text="排行榜"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
             app:strokeColor="#FFFFFF"
-            app:strokeWidth="2dp"
             app:cornerRadius="32dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -95,10 +80,64 @@
             android:layout_height="64dp"
             android:text="个人档案"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
             app:strokeColor="#FFFFFF"
-            app:strokeWidth="2dp"
             app:cornerRadius="32dp" />
+    </LinearLayout>
+
+    <!-- 难度选择面板 (初始隐藏) -->
+    <LinearLayout
+        android:id="@+id/difficulty_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/game_title"
+        app:layout_constraintVertical_bias="0.3">
+
+        <TextView
+            android:id="@+id/tv_mode_selected"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:text="模式：单人模式"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_easy"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="16dp"
+            android:text="@string/easy1"
+            app:cornerRadius="32dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_normal"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="16dp"
+            android:text="@string/normal"
+            app:cornerRadius="32dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_hard"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="16dp"
+            android:text="@string/hard"
+            app:cornerRadius="32dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_back_to_mode"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="返回模式选择"
+            android:textColor="#AAAAAA" />
     </LinearLayout>
 
     <LinearLayout
@@ -112,22 +151,17 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:text="@string/music"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp" />
-
+            android:textColor="#FFFFFF" />
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switch_music"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:checked="true"
-            app:thumbTint="#FFD700"
-            app:trackTint="#FFFFFF"/>
+            android:checked="true" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
