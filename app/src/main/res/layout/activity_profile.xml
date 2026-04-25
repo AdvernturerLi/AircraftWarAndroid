@@ -47,7 +47,7 @@
                             android:id="@+id/tv_nickname"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="AcePilot_01"
+                            android:text="AcePilot"
                             android:textColor="#212121"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -57,12 +57,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:background="@drawable/bg_level_badge"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="2dp"
-                            android:text="Lv. 12"
-                            android:textColor="@android:color/white"
-                            android:textSize="12sp"
+                            android:text="Lv. 1"
+                            android:textColor="#1976D2"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </RelativeLayout>
@@ -72,28 +69,30 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:fontStyle="italic"
-                    android:text="Aim for the stars, even if you land among the clouds."
-                    android:textColor="#616161" />
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="4dp"
+                    android:text="点击这里修改个性签名..."
+                    android:textColor="#616161"
+                    android:fontStyle="italic"/>
 
                 <TextView
                     android:id="@+id/tv_reg_date"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Registered: 2024-03-01"
+                    android:text="加入时间: 2024"
                     android:textColor="#9E9E9E"
                     android:textSize="12sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 2. Game Statistics -->
+        <!-- 2. Statistics -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="12dp"
-            android:text="Game Statistics"
+            android:text="游戏数据统计"
             android:textColor="#333333"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -101,115 +100,68 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            app:cardCornerRadius="16dp">
 
             <GridLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:columnCount="3"
-                android:padding="8dp"
-                android:useDefaultMargins="true">
+                android:columnCount="2"
+                android:padding="12dp">
 
-                <!-- Stats Items -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-                    <TextView android:id="@+id/tv_stat_matches" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="120" android:textStyle="bold" android:textColor="#1976D2" android:textSize="18sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Matches" android:textSize="10sp"/>
+                <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                    <TextView android:id="@+id/tv_stat_matches" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textStyle="bold" android:textColor="#1976D2" android:textSize="20sp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="联机总场次" android:textSize="12sp"/>
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-                    <TextView android:id="@+id/tv_stat_wins" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="75" android:textStyle="bold" android:textColor="#388E3C" android:textSize="18sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Wins" android:textSize="10sp"/>
+                <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                    <TextView android:id="@+id/tv_stat_winrate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0%" android:textStyle="bold" android:textColor="#388E3C" android:textSize="20sp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="胜率" android:textSize="12sp"/>
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-                    <TextView android:id="@+id/tv_stat_winrate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="62.5%" android:textStyle="bold" android:textColor="#FBC02D" android:textSize="18sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Win Rate" android:textSize="10sp"/>
+                <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                    <TextView android:id="@+id/tv_stat_streak" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textStyle="bold" android:textColor="#FBC02D" android:textSize="20sp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="单人最高分" android:textSize="12sp"/>
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-                    <TextView android:id="@+id/tv_stat_streak" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="15" android:textStyle="bold" android:textColor="#D32F2F" android:textSize="18sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Max Streak" android:textSize="10sp"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-                    <TextView android:id="@+id/tv_stat_kills" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="300" android:textStyle="bold" android:textColor="#7B1FA2" android:textSize="18sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kills" android:textSize="10sp"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-                    <TextView android:id="@+id/tv_stat_deaths" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="180" android:textStyle="bold" android:textColor="#455A64" android:textSize="18sp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Deaths" android:textSize="10sp"/>
+                <!-- 为了凑偶数添加一个隐藏的或占位的 -->
+                <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1" android:gravity="center" android:orientation="vertical" android:padding="8dp">
+                    <TextView android:id="@+id/tv_stat_wins" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textStyle="bold" android:textColor="#E91E63" android:textSize="20sp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="胜场" android:textSize="12sp"/>
                 </LinearLayout>
             </GridLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 3. Achievement Wall -->
-        <RelativeLayout
-            android:layout_width="match_parent"
+        <!-- 3. Battle History -->
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="12dp"
+            android:text="联机战绩历史"
+            android:textColor="#333333"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Achievement Wall"
-                android:textColor="#333333"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tv_achievement_progress"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:text="3 / 10"
-                android:textColor="#757575"
-                android:textSize="14sp" />
-        </RelativeLayout>
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_medals"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false" />
+            app:cardCornerRadius="16dp">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_history"
+                android:layout_width="match_parent"
+                android:layout_height="300dp"
+                android:padding="8dp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_logout"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="退出登录"
+            android:textColor="#F44336" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

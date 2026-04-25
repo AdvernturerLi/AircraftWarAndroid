@@ -1,23 +1,30 @@
 package edu.hitsz;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import edu.hitsz.data.GameStats;
+import edu.hitsz.data.Config;
+import edu.hitsz.data.MatchRecord;
 import edu.hitsz.data.Medal;
+import edu.hitsz.data.NetworkManager;
 import edu.hitsz.data.ScoreDao;
 import edu.hitsz.data.ScoreDaoImpl;
 import edu.hitsz.data.ScoreRecord;
@@ -26,6 +33,9 @@ import edu.hitsz.data.UserProfile;
 public class ProfileActivity extends AppCompatActivity {
 
     private ScoreDao scoreDao;
+    private NetworkManager networkManager;
+    private HistoryAdapter historyAdapter;
+    private TextView tvSignature;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,131 +43,129 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_profile);
 
         scoreDao = new ScoreDaoImpl(this);
+        networkManager = new NetworkManager();
 
-        UserProfile profile = loadUserProfile();
-        GameStats stats = calculateStats();
-        List<Medal> achievements = loadAchievements(stats);
-
-        setupProfileCard(profile);
-        setupStatisticsPanel(stats);
-        setupAchievementWall(achievements);
+        setupUI();
+        loadData();
     }
 
-    private UserProfile loadUserProfile() {
-        List<ScoreRecord> scores = scoreDao.getAllScores();
-        String name = scores.isEmpty() ? "New Pilot" : scores.get(0).getUserName();
-        // Mock data for level and signature as they aren't in the current DB
-        return new UserProfile(name, "Aim for the stars, even if you land among the clouds.", 12, "2024-03-01");
-    }
-
-    private GameStats calculateStats() {
-        List<ScoreRecord> scores = scoreDao.getAllScores();
-        int totalMatches = scores.size();
-        int totalWins = 0;
-        int maxScore = 0;
-        int totalKills = 0;
-
-        for (ScoreRecord r : scores) {
-            // Logic to estimate "wins" and other stats from game records
-            if (r.getScore() > 500) totalWins++;
-            if (r.getScore() > maxScore) maxScore = r.getScore();
-            totalKills += r.getScore() / 10; 
-        }
-
-        // Mocking deaths as matches * 1.5 for display purposes
-        return new GameStats(totalMatches, totalWins, maxScore / 100, totalKills, totalMatches + (totalMatches/2));
-    }
-
-    private List<Medal> loadAchievements(GameStats stats) {
-        List<Medal> medals = new ArrayList<>();
-        // Define achievements based on stats
-        medals.add(new Medal("Ace Pilot", "Down 500 enemies", R.drawable.prop_bullet, stats.getTotalKills() >= 500));
-        medals.add(new Medal("Survivor", "Play 10 matches", R.drawable.prop_blood, stats.getTotalMatches() >= 10));
-        medals.add(new Medal("Bomb Master", "High score achievement", R.drawable.prop_bomb, stats.getMaxKillStreak() >= 20));
-        medals.add(new Medal("Elite Force", "Reach Level 10", R.drawable.elite, true));
-        medals.add(new Medal("Sky Hero", "Score over 2000", R.drawable.hero, stats.getMaxKillStreak() >= 20));
-        medals.add(new Medal("Boss Slayer", "Destroy Bosses", R.drawable.boss, stats.getTotalWins() >= 5));
+    private void setupUI() {
+        tvSignature = findViewById(R.id.tv_signature);
         
-        return medals;
+        // 点击签名进行修改
+        tvSignature.setOnClickListener(v -> showEditSignatureDialog());
+
+        RecyclerView rvHistory = findViewById(R.id.rv_history);
+        rvHistory.setLayoutManager(new LinearLayoutManager(this));
+        historyAdapter = new HistoryAdapter(new ArrayList<>());
+        rvHistory.setAdapter(historyAdapter);
+
+        findViewById(R.id.btn_logout).setOnClickListener(v -> {
+            startActivity(new Intent(this, LoginActivity.class));
+            finishAffinity();
+        });
     }
 
-    private void setupProfileCard(UserProfile profile) {
+    private void showEditSignatureDialog() {
+        final EditText editText = new EditText(this);
+        editText.setText(tvSignature.getText());
+        editText.setHint("输入你的新个性签名");
+
+        new AlertDialog.Builder(this)
+                .setTitle("修改个人描述")
+                .setView(editText)
+                .setPositiveButton("保存", (dialog, which) -> {
+                    String newSig = editText.getText().toString().trim();
+                    if (!newSig.isEmpty()) {
+                        updateSignatureOnServer(newSig);
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void updateSignatureOnServer(String signature) {
+        networkManager.updateSignature(Config.userNickname, signature, new NetworkManager.OnResponseListener<String>() {
+            @Override
+            public void onSuccess(String data) {
+                runOnUiThread(() -> {
+                    tvSignature.setText(signature);
+                    Toast.makeText(ProfileActivity.this, "描述已更新", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onFailure(String error) {
+                runOnUiThread(() -> Toast.makeText(ProfileActivity.this, "更新失败: " + error, Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void loadData() {
         TextView tvNickname = findViewById(R.id.tv_nickname);
-        TextView tvLevel = findViewById(R.id.tv_level);
-        TextView tvSignature = findViewById(R.id.tv_signature);
-        TextView tvRegDate = findViewById(R.id.tv_reg_date);
+        tvNickname.setText(Config.userNickname);
 
-        tvNickname.setText(profile.getNickname());
-        tvLevel.setText(String.format(Locale.getDefault(), "Lv. %d", profile.getLevel()));
-        tvSignature.setText(profile.getSignature());
-        tvRegDate.setText(String.format(Locale.getDefault(), "Registered: %s", profile.getRegisterTime()));
+        List<ScoreRecord> localScores = scoreDao.getAllScores();
+        int maxScore = localScores.isEmpty() ? 0 : localScores.get(0).getScore();
+        ((TextView) findViewById(R.id.tv_stat_streak)).setText(String.valueOf(maxScore));
+
+        networkManager.getMatchHistory(Config.userNickname, new NetworkManager.OnResponseListener<List<MatchRecord>>() {
+            @Override
+            public void onSuccess(List<MatchRecord> history) {
+                runOnUiThread(() -> {
+                    historyAdapter.updateData(history);
+                    calculateMatchStats(history);
+                });
+            }
+
+            @Override
+            public void onFailure(String error) {
+                runOnUiThread(() -> Toast.makeText(ProfileActivity.this, "战绩加载失败", Toast.LENGTH_SHORT).show());
+            }
+        });
     }
 
-    private void setupStatisticsPanel(GameStats stats) {
-        ((TextView) findViewById(R.id.tv_stat_matches)).setText(String.valueOf(stats.getTotalMatches()));
-        ((TextView) findViewById(R.id.tv_stat_wins)).setText(String.valueOf(stats.getTotalWins()));
-        ((TextView) findViewById(R.id.tv_stat_winrate)).setText(String.format(Locale.getDefault(), "%.1f%%", stats.getWinRate()));
-        ((TextView) findViewById(R.id.tv_stat_streak)).setText(String.valueOf(stats.getMaxKillStreak()));
-        ((TextView) findViewById(R.id.tv_stat_kills)).setText(String.valueOf(stats.getTotalKills()));
-        ((TextView) findViewById(R.id.tv_stat_deaths)).setText(String.valueOf(stats.getTotalDeaths()));
-    }
-
-    private void setupAchievementWall(List<Medal> achievements) {
-        RecyclerView rvMedals = findViewById(R.id.rv_medals);
-        TextView tvProgress = findViewById(R.id.tv_achievement_progress);
-
-        rvMedals.setLayoutManager(new GridLayoutManager(this, 3));
-        
-        int unlockedCount = 0;
-        for (Medal m : achievements) {
-            if (m.isUnlocked()) unlockedCount++;
+    private void calculateMatchStats(List<MatchRecord> history) {
+        int totalMatches = history.size();
+        int wins = 0;
+        for (MatchRecord r : history) {
+            if ("WIN".equals(r.getResult(Config.userNickname))) wins++;
         }
-        tvProgress.setText(String.format(Locale.getDefault(), "%d / %d", unlockedCount, achievements.size()));
+        double winRate = totalMatches == 0 ? 0 : (wins * 100.0 / totalMatches);
 
-        rvMedals.setAdapter(new MedalGridAdapter(achievements));
+        ((TextView) findViewById(R.id.tv_stat_matches)).setText(String.valueOf(totalMatches));
+        ((TextView) findViewById(R.id.tv_stat_wins)).setText(String.valueOf(wins));
+        ((TextView) findViewById(R.id.tv_stat_winrate)).setText(String.format(Locale.getDefault(), "%.1f%%", winRate));
     }
 
-    private static class MedalGridAdapter extends RecyclerView.Adapter<MedalGridAdapter.ViewHolder> {
-        private final List<Medal> medals;
-
-        MedalGridAdapter(List<Medal> medals) { this.medals = medals; }
+    private static class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHolder> {
+        private List<MatchRecord> records;
+        HistoryAdapter(List<MatchRecord> records) { this.records = records; }
+        void updateData(List<MatchRecord> newData) { this.records = newData; notifyDataSetChanged(); }
 
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_medal, parent, false);
-            return new ViewHolder(view);
+            View v = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_2, parent, false);
+            return new ViewHolder(v);
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            Medal medal = medals.get(position);
-            holder.tvName.setText(medal.getName());
-            holder.ivIcon.setImageResource(medal.getIconResId());
-            
-            if (medal.isUnlocked()) {
-                holder.ivIcon.setAlpha(1.0f);
-            } else {
-                holder.ivIcon.setAlpha(0.2f);
-                holder.tvName.setTextColor(0xFF9E9E9E);
-            }
+            MatchRecord r = records.get(position);
+            String res = r.getResult(Config.userNickname);
+            holder.text1.setText(String.format("[%s] VS %s", res, r.getOpponent(Config.userNickname)));
+            holder.text2.setText(String.format("分数: %d - %d | 时间: %s", r.getMyScore(Config.userNickname), r.getOpScore(Config.userNickname), r.getTimeString()));
+            if ("WIN".equals(res)) holder.text1.setTextColor(0xFF388E3C);
+            else if ("LOSS".equals(res)) holder.text1.setTextColor(0xFFD32F2F);
         }
 
         @Override
-        public int getItemCount() { return medals.size(); }
+        public int getItemCount() { return records.size(); }
 
         static class ViewHolder extends RecyclerView.ViewHolder {
-            ImageView ivIcon;
-            TextView tvName;
-
-            ViewHolder(View itemView) {
-                super(itemView);
-                ivIcon = itemView.findViewById(R.id.iv_medal_icon);
-                tvName = itemView.findViewById(R.id.tv_medal_name);
-                // Hide description in grid wall for cleaner appearance
-                View desc = itemView.findViewById(R.id.tv_medal_desc);
-                if (desc != null) desc.setVisibility(View.GONE);
-            }
+            TextView text1, text2;
+            ViewHolder(View v) { super(v); text1 = v.findViewById(android.R.id.text1); text2 = v.findViewById(android.R.id.text2); }
         }
     }
 }
