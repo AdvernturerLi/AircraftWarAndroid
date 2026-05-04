@@ -4,6 +4,13 @@
     <string name="textview">TextView</string>
     <string name="button">Button</string>
     <string name="android">飞机大战 Android 版</string>
+    <string name="login_title">雷霆战机 - 登录</string>
+    <string name="username_hint">用户名</string>
+    <string name="password_hint">密码</string>
+    <string name="login_button">登录</string>
+    <string name="register_prompt">没有账号？立即注册</string>
+    <string name="offline_mode">离线模式（不登录直接玩）</string>
+    <string name="title_with_user">雷霆战机 - %1$s</string>
     <string name="normal">普通模式</string>
     <string name="easy1">简单模式</string>
     <string name="hard">困难模式</string>

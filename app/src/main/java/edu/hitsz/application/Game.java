@@ -192,6 +192,15 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
                     gameOverFlag = true;
                     isRunning = false;
                 }
+
+                @Override
+                public void onError(String message) {
+                    gameOverFlag = true;
+                    isRunning = false;
+                    if (soundManager != null) {
+                        soundManager.stopAll();
+                    }
+                }
             });
         }
     }

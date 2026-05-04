@@ -73,7 +73,7 @@
                     android:padding="4dp"
                     android:text="点击这里修改个性签名..."
                     android:textColor="#616161"
-                    android:fontStyle="italic"/>
+                    android:textStyle="italic"/>
 
                 <TextView
                     android:id="@+id/tv_reg_date"

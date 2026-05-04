@@ -6,14 +6,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -23,12 +21,10 @@ import java.util.Locale;
 
 import edu.hitsz.data.Config;
 import edu.hitsz.data.MatchRecord;
-import edu.hitsz.data.Medal;
 import edu.hitsz.data.NetworkManager;
 import edu.hitsz.data.ScoreDao;
 import edu.hitsz.data.ScoreDaoImpl;
 import edu.hitsz.data.ScoreRecord;
-import edu.hitsz.data.UserProfile;
 
 public class ProfileActivity extends AppCompatActivity {
 
@@ -42,6 +38,7 @@ public class ProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
 
+        Config.loadSession(this);
         scoreDao = new ScoreDaoImpl(this);
         networkManager = new NetworkManager();
 
@@ -61,12 +58,18 @@ public class ProfileActivity extends AppCompatActivity {
         rvHistory.setAdapter(historyAdapter);
 
         findViewById(R.id.btn_logout).setOnClickListener(v -> {
+            Config.clearSession(this);
             startActivity(new Intent(this, LoginActivity.class));
             finishAffinity();
         });
     }
 
     private void showEditSignatureDialog() {
+        if (!Config.isLoggedIn) {
+            Toast.makeText(this, "离线访客模式下暂不支持云端签名", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         final EditText editText = new EditText(this);
         editText.setText(tvSignature.getText());
         editText.setHint("输入你的新个性签名");
@@ -85,10 +88,11 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void updateSignatureOnServer(String signature) {
-        networkManager.updateSignature(Config.userNickname, signature, new NetworkManager.OnResponseListener<String>() {
+        networkManager.updateSignature(Config.getCurrentUserName(), signature, new NetworkManager.OnResponseListener<>() {
             @Override
             public void onSuccess(String data) {
                 runOnUiThread(() -> {
+                    Config.saveSession(ProfileActivity.this, true, Config.getCurrentUserName(), signature, Config.registerTime);
                     tvSignature.setText(signature);
                     Toast.makeText(ProfileActivity.this, "描述已更新", Toast.LENGTH_SHORT).show();
                 });
@@ -96,20 +100,34 @@ public class ProfileActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(String error) {
-                runOnUiThread(() -> Toast.makeText(ProfileActivity.this, "更新失败: " + error, Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    Config.saveSession(ProfileActivity.this, true, Config.getCurrentUserName(), signature, Config.registerTime);
+                    tvSignature.setText(signature);
+                    Toast.makeText(ProfileActivity.this, "云端更新失败，已本地保存", Toast.LENGTH_SHORT).show();
+                });
             }
         });
     }
 
     private void loadData() {
         TextView tvNickname = findViewById(R.id.tv_nickname);
-        tvNickname.setText(Config.userNickname);
+        tvNickname.setText(Config.getCurrentUserName());
+        ((TextView) findViewById(R.id.tv_signature)).setText(Config.isLoggedIn ? Config.userSignature : "离线访客模式，云端资料不可用");
+        ((TextView) findViewById(R.id.tv_reg_date)).setText(Config.isLoggedIn
+                ? "加入时间: " + (Config.registerTime.isEmpty() ? "暂未获取" : Config.registerTime)
+                : "加入时间: 离线模式");
 
         List<ScoreRecord> localScores = scoreDao.getAllScores();
         int maxScore = localScores.isEmpty() ? 0 : localScores.get(0).getScore();
         ((TextView) findViewById(R.id.tv_stat_streak)).setText(String.valueOf(maxScore));
 
-        networkManager.getMatchHistory(Config.userNickname, new NetworkManager.OnResponseListener<List<MatchRecord>>() {
+        if (!Config.isLoggedIn) {
+            historyAdapter.updateData(new ArrayList<>());
+            calculateMatchStats(new ArrayList<>());
+            return;
+        }
+
+        networkManager.getMatchHistory(Config.getCurrentUserName(), new NetworkManager.OnResponseListener<>() {
             @Override
             public void onSuccess(List<MatchRecord> history) {
                 runOnUiThread(() -> {
@@ -120,7 +138,11 @@ public class ProfileActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(String error) {
-                runOnUiThread(() -> Toast.makeText(ProfileActivity.this, "战绩加载失败", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    Toast.makeText(ProfileActivity.this, "战绩加载失败，已显示本地数据", Toast.LENGTH_SHORT).show();
+                    historyAdapter.updateData(new ArrayList<>());
+                    calculateMatchStats(new ArrayList<>());
+                });
             }
         });
     }
@@ -129,7 +151,7 @@ public class ProfileActivity extends AppCompatActivity {
         int totalMatches = history.size();
         int wins = 0;
         for (MatchRecord r : history) {
-            if ("WIN".equals(r.getResult(Config.userNickname))) wins++;
+            if ("WIN".equals(r.getResult(Config.getCurrentUserName()))) wins++;
         }
         double winRate = totalMatches == 0 ? 0 : (wins * 100.0 / totalMatches);
 
@@ -153,9 +175,9 @@ public class ProfileActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             MatchRecord r = records.get(position);
-            String res = r.getResult(Config.userNickname);
-            holder.text1.setText(String.format("[%s] VS %s", res, r.getOpponent(Config.userNickname)));
-            holder.text2.setText(String.format("分数: %d - %d | 时间: %s", r.getMyScore(Config.userNickname), r.getOpScore(Config.userNickname), r.getTimeString()));
+            String res = r.getResult(Config.getCurrentUserName());
+            holder.text1.setText(String.format("[%s] VS %s", res, r.getOpponent(Config.getCurrentUserName())));
+            holder.text2.setText(String.format(Locale.getDefault(), "分数: %d - %d | 时间: %s", r.getMyScore(Config.getCurrentUserName()), r.getOpScore(Config.getCurrentUserName()), r.getTimeString()));
             if ("WIN".equals(res)) holder.text1.setTextColor(0xFF388E3C);
             else if ("LOSS".equals(res)) holder.text1.setTextColor(0xFFD32F2F);
         }

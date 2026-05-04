@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 
 import edu.hitsz.application.Game;
 import edu.hitsz.application.SoundManager;
+import edu.hitsz.data.Config;
 import edu.hitsz.data.NetworkManager;
 import edu.hitsz.data.ScoreDao;
 import edu.hitsz.data.ScoreDaoImpl;
@@ -50,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Config.loadSession(this);
         scoreDao = new ScoreDaoImpl(this);
         networkManager = new NetworkManager();
         wsManager = new WebSocketManager();
@@ -84,6 +86,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btn_multi_player).setOnClickListener(v -> {
+            if (!Config.isLoggedIn) {
+                Toast.makeText(this, "联机对战需要先登录", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(this, LoginActivity.class));
+                // 不直接 finish，允许用户从登录页返回
+                return;
+            }
             isMultiplayer = true;
             showDifficultySelection("模式：联机对战");
         });
@@ -99,6 +107,10 @@ public class MainActivity extends AppCompatActivity {
         SwitchCompat switchMusic = findViewById(R.id.switch_music);
         switchMusic.setChecked(isMusicEnabled);
         switchMusic.setOnCheckedChangeListener((buttonView, isChecked) -> isMusicEnabled = isChecked);
+        
+        // 统一显示当前用户名
+        TextView tvTitle = findViewById(R.id.game_title);
+        tvTitle.setText(getString(R.string.title_with_user, Config.getCurrentUserName()));
     }
 
     private void showDifficultySelection(String modeTitle) {
@@ -123,11 +135,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void startMatchmaking() {
         matchDialog = new ProgressDialog(this);
-        matchDialog.setMessage("正在匹配对手中，请稍候...");
+        matchDialog.setMessage("正在匹配对手 [" + getDiffName(currentDifficulty) + "]...");
         matchDialog.setCancelable(true);
         matchDialog.setOnCancelListener(dialog -> {
             timeoutHandler.removeCallbacks(timeoutRunnable);
-            if (wsManager != null) wsManager.close();
+            wsManager.close();
         });
         matchDialog.show();
 
@@ -135,13 +147,13 @@ public class MainActivity extends AppCompatActivity {
             if (matchDialog != null && matchDialog.isShowing()) {
                 matchDialog.dismiss();
                 wsManager.close();
-                Toast.makeText(this, "匹配超时，请稍后再试", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "匹配超时，请检查服务器连接", Toast.LENGTH_LONG).show();
             }
         };
         timeoutHandler.postDelayed(timeoutRunnable, 15000);
 
-        String myName = scoreDao.getAllScores().isEmpty() ? "新晋飞行员" : scoreDao.getAllScores().get(0).getUserName();
-        wsManager.connect(currentDifficulty, myName);
+        // 使用统一的用户名进行联机
+        wsManager.connect(currentDifficulty, Config.getCurrentUserName());
 
         wsManager.setOnMessageListener(new WebSocketManager.OnMessageListener() {
             @Override
@@ -168,14 +180,24 @@ public class MainActivity extends AppCompatActivity {
             @Override public void onOpponentScore(int score) {}
             @Override public void onOpponentDead() {}
             @Override public void onGameOver(int p1Score, int p2Score) {}
+
+            @Override
+            public void onError(String message) {
+                runOnUiThread(() -> {
+                    timeoutHandler.removeCallbacks(timeoutRunnable);
+                    if (matchDialog != null && matchDialog.isShowing()) matchDialog.dismiss();
+                    if (matchConfirmDialog != null && matchConfirmDialog.isShowing()) matchConfirmDialog.dismiss();
+                    Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                });
+            }
         });
     }
 
     private void showMatchConfirmDialog(String opponentName) {
         matchConfirmDialog = new AlertDialog.Builder(this)
                 .setTitle("匹配成功！")
-                .setMessage("对手：" + opponentName + "\n点击开战进入准备状态")
-                .setPositiveButton("开战！", null)
+                .setMessage("对手：" + opponentName + "\n难度：" + getDiffName(currentDifficulty) + "\n准备好开始对战了吗？")
+                .setPositiveButton("准备就绪", null)
                 .setNegativeButton("退出", (dialog, which) -> wsManager.close())
                 .setCancelable(false)
                 .create();
@@ -184,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
 
         matchConfirmDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             wsManager.sendReady();
-            matchConfirmDialog.setMessage("已准备，等待对方确认...");
+            matchConfirmDialog.setMessage("等待对方准备...");
             v.setEnabled(false);
         });
     }
@@ -195,27 +217,19 @@ public class MainActivity extends AppCompatActivity {
         return "普通";
     }
 
+
     private void startGame(int difficulty) {
         game = new Game(this, difficulty, scoreDao, soundManager, isMusicEnabled, isMultiplayer, wsManager);
-
         game.setOnGameOverListener(new Game.GameHolder() {
             @Override
             public void onGameOver(int score) {
-                runOnUiThread(() -> {
-                    gameStop();
-                    showScoreDialog(score);
-                });
+                runOnUiThread(() -> { gameStop(); showScoreDialog(score); });
             }
-
             @Override
             public void onMultiplayerGameOver(int myScore, int opponentScore) {
-                runOnUiThread(() -> {
-                    gameStop();
-                    showMultiplayerResult(myScore, opponentScore);
-                });
+                runOnUiThread(() -> { gameStop(); showMultiplayerResult(myScore, opponentScore); });
             }
         });
-
         setContentView(game);
         if (isMusicEnabled) soundManager.playBgm();
     }
@@ -227,11 +241,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showMultiplayerResult(int myScore, int opponentScore) {
-        String result = myScore > opponentScore ? "你赢了！" : (myScore < opponentScore ? "你输了..." : "平局！");
+        String res = myScore > opponentScore ? "你赢了！" : (myScore < opponentScore ? "你输了..." : "平局");
         new AlertDialog.Builder(this)
-                .setTitle("对战结束")
-                .setMessage(result + "\n你的分数: " + myScore + "\n对手分数: " + opponentScore)
-                .setPositiveButton("确定", (dialog, which) -> {
+                .setTitle("对战结果")
+                .setMessage(res + "\n你的得分: " + myScore + "\n对手得分: " + opponentScore)
+                .setPositiveButton("保存成绩", (dialog, which) -> {
                     if (wsManager != null) wsManager.close();
                     showScoreDialog(myScore);
                 })
@@ -240,40 +254,69 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showScoreDialog(int score) {
-        final EditText editText = new EditText(this);
-        editText.setHint("输入你的名字");
+        if (Config.isLoggedIn) {
+            // 已登录用户：自动使用用户名，不再弹输入框
+            new AlertDialog.Builder(this)
+                    .setTitle("游戏结束")
+                    .setMessage(Config.getCurrentUserName() + "，你的最终得分: " + score + "\n记录已自动保存。")
+                    .setPositiveButton("查看排行榜", (dialog, which) -> {
+                        saveAndUploadScore(Config.getCurrentUserName(), score);
+                    })
+                    .setCancelable(false)
+                    .show();
+        } else {
+            // 访客模式：允许输入名字
+            final EditText editText = new EditText(this);
+            editText.setText("访客");
+            editText.setSelectAllOnFocus(true);
+            new AlertDialog.Builder(this)
+                    .setTitle("保存成绩")
+                    .setMessage("你的得分: " + score + "\n请输入昵称：")
+                    .setView(editText)
+                    .setPositiveButton("确定", (dialog, which) -> {
+                        String name = editText.getText().toString().trim();
+                        if (name.isEmpty()) name = "访客";
+                        saveAndUploadScore(name, score);
+                    })
+                    .setNegativeButton("不保存", (dialog, which) -> {
+                        startActivity(new Intent(MainActivity.this, RankActivity.class));
+                    })
+                    .setCancelable(false)
+                    .show();
+        }
+    }
 
-        new AlertDialog.Builder(this)
-                .setTitle("保存成绩")
-                .setMessage("你的得分: " + score)
-                .setView(editText)
-                .setPositiveButton("保存并上传", (dialog, which) -> {
-                    String userName = editText.getText().toString().trim();
-                    if (userName.isEmpty()) userName = "匿名玩家";
-                    ScoreRecord record = new ScoreRecord(userName, score, LocalDateTime.now(), currentDifficulty);
-                    scoreDao.addScore(record);
-                    networkManager.uploadScore(record, new NetworkManager.OnResponseListener<String>() {
-                        @Override
-                        public void onSuccess(String data) {
-                            runOnUiThread(() -> Toast.makeText(MainActivity.this, "云端同步成功", Toast.LENGTH_SHORT).show());
-                        }
-                        @Override
-                        public void onFailure(String error) {
-                            runOnUiThread(() -> Toast.makeText(MainActivity.this, "云端同步失败: " + error, Toast.LENGTH_SHORT).show());
-                        }
+    private void saveAndUploadScore(String name, int score) {
+        String safeName = (name == null || name.trim().isEmpty()) ? Config.getCurrentUserName() : name.trim();
+        ScoreRecord record = new ScoreRecord(safeName, score, LocalDateTime.now(), currentDifficulty);
+        scoreDao.addScore(record);
+        
+        // 只有登录用户才尝试上传云端
+        if (Config.isLoggedIn) {
+            networkManager.uploadScore(record, new NetworkManager.OnResponseListener<>() {
+                @Override
+                public void onSuccess(String data) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "云端同步成功", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(MainActivity.this, RankActivity.class));
                     });
-                    startActivity(new Intent(MainActivity.this, RankActivity.class));
-                })
-                .setNegativeButton("返回菜单", (dialog, which) -> {})
-                .setCancelable(false)
-                .show();
+                }
+                @Override
+                public void onFailure(String error) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "本地已保存 (服务器离线)", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(MainActivity.this, RankActivity.class));
+                    });
+                }
+            });
+        } else {
+            Toast.makeText(this, "记录已保存到本地", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(MainActivity.this, RankActivity.class));
+        }
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        if (soundManager != null) soundManager.stopAll();
-    }
+    protected void onPause() { super.onPause(); if (soundManager != null) soundManager.stopAll(); }
 
     @Override
     protected void onDestroy() {
