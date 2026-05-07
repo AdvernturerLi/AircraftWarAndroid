@@ -11,7 +11,7 @@ public class Config {
     private static final String KEY_REGISTER_TIME = "register_time";
 
     // 穿透域名 (重启 cpolar 后记得修改这里)
-    public static final String HOST = "192.168.2.103:8080";
+    public static final String HOST = "10.250.95.44:8080";
     public static final String BASE_URL = "http://" + HOST + "/api";
     public static final String WS_URL = "ws://" + HOST + "/ws/game";
 

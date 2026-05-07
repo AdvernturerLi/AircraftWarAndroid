@@ -8,6 +8,7 @@
     tools:context=".MainActivity">
 
     <View
+        android:id="@+id/view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#4D000000" />
@@ -16,7 +17,7 @@
         android:id="@+id/game_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
+        android:layout_marginTop="68dp"
         android:layout_marginStart="24dp"
         android:layout_marginEnd="24dp"
         android:gravity="center"
@@ -24,11 +25,27 @@
         android:textColor="#FFD700"
         android:textSize="28sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btn_logout_main"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_logout_main"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:layout_marginEnd="8dp"
+        android:text="退出"
+        android:textColor="#FF6B6B"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!-- 模式选择面板 -->
+
+    <!-- 难度选择面板 (初始隐藏) -->
     <LinearLayout
         android:id="@+id/mode_layout"
         android:layout_width="wrap_content"
@@ -38,9 +55,10 @@
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/game_title"
-        app:layout_constraintVertical_bias="0.3">
+        app:layout_constraintVertical_bias="0.327">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_single_player"
@@ -49,8 +67,8 @@
             android:layout_marginBottom="16dp"
             android:text="单人模式"
             android:textSize="18sp"
-            app:cornerRadius="32dp"
-            app:backgroundTint="#4CAF50"/>
+            app:backgroundTint="#4CAF50"
+            app:cornerRadius="32dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_multi_player"
@@ -59,8 +77,8 @@
             android:layout_marginBottom="16dp"
             android:text="联机对战"
             android:textSize="18sp"
-            app:cornerRadius="32dp"
-            app:backgroundTint="#FF9800"/>
+            app:backgroundTint="#FF9800"
+            app:cornerRadius="32dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_rank"
@@ -70,8 +88,8 @@
             android:layout_marginBottom="16dp"
             android:text="排行榜"
             android:textColor="#FFFFFF"
-            app:strokeColor="#FFFFFF"
-            app:cornerRadius="32dp" />
+            app:cornerRadius="32dp"
+            app:strokeColor="#FFFFFF" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_profile"
@@ -80,11 +98,10 @@
             android:layout_height="64dp"
             android:text="个人档案"
             android:textColor="#FFFFFF"
-            app:strokeColor="#FFFFFF"
-            app:cornerRadius="32dp" />
+            app:cornerRadius="32dp"
+            app:strokeColor="#FFFFFF" />
     </LinearLayout>
 
-    <!-- 难度选择面板 (初始隐藏) -->
     <LinearLayout
         android:id="@+id/difficulty_layout"
         android:layout_width="wrap_content"

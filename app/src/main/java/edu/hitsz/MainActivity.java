@@ -108,9 +108,28 @@ public class MainActivity extends AppCompatActivity {
         switchMusic.setChecked(isMusicEnabled);
         switchMusic.setOnCheckedChangeListener((buttonView, isChecked) -> isMusicEnabled = isChecked);
         
+        // ...existing code...
         // 统一显示当前用户名
         TextView tvTitle = findViewById(R.id.game_title);
         tvTitle.setText(getString(R.string.title_with_user, Config.getCurrentUserName()));
+
+        // 处理主界面的退出登录按钮
+        findViewById(R.id.btn_logout_main).setOnClickListener(v -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("确认退出登录")
+                    .setMessage("确定要退出登录吗？")
+                    .setPositiveButton("确认", (dialog, which) -> {
+                        Config.clearSession(this);
+                        Toast.makeText(this, "已退出登录", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(this, LoginActivity.class));
+                        finishAffinity();
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        });
+
+        // 根据登录状态显示/隐藏退出按钮
+        findViewById(R.id.btn_logout_main).setVisibility(Config.isLoggedIn ? View.VISIBLE : View.GONE);
     }
 
     private void showDifficultySelection(String modeTitle) {
