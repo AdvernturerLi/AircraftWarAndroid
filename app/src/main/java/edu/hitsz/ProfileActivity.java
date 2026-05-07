@@ -15,7 +15,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -113,19 +115,25 @@ public class ProfileActivity extends AppCompatActivity {
         TextView tvNickname = findViewById(R.id.tv_nickname);
         tvNickname.setText(Config.getCurrentUserName());
         ((TextView) findViewById(R.id.tv_signature)).setText(Config.isLoggedIn ? Config.userSignature : "离线访客模式，云端资料不可用");
+
+        // 格式化加入时间显示
+        String displayRegisterTime = formatRegisterTime(Config.registerTime);
         ((TextView) findViewById(R.id.tv_reg_date)).setText(Config.isLoggedIn
-                ? "加入时间: " + (Config.registerTime.isEmpty() ? "暂未获取" : Config.registerTime)
+                ? "加入时间: " + displayRegisterTime
                 : "加入时间: 离线模式");
 
-        List<ScoreRecord> localScores = scoreDao.getAllScores();
-        int maxScore = localScores.isEmpty() ? 0 : localScores.get(0).getScore();
-        ((TextView) findViewById(R.id.tv_stat_streak)).setText(String.valueOf(maxScore));
-
+        // 如果未登录，显示本地最高分
         if (!Config.isLoggedIn) {
+            List<ScoreRecord> localScores = scoreDao.getAllScores();
+            int maxScore = localScores.isEmpty() ? 0 : localScores.get(0).getScore();
+            ((TextView) findViewById(R.id.tv_stat_streak)).setText(String.valueOf(maxScore));
             historyAdapter.updateData(new ArrayList<>());
             calculateMatchStats(new ArrayList<>());
             return;
         }
+
+        // 已登录：从云端获取该用户的最高分
+        loadUserHighestScore();
 
         networkManager.getMatchHistory(Config.getCurrentUserName(), new NetworkManager.OnResponseListener<>() {
             @Override
@@ -142,6 +150,54 @@ public class ProfileActivity extends AppCompatActivity {
                     Toast.makeText(ProfileActivity.this, "战绩加载失败，已显示本地数据", Toast.LENGTH_SHORT).show();
                     historyAdapter.updateData(new ArrayList<>());
                     calculateMatchStats(new ArrayList<>());
+                });
+            }
+        });
+    }
+
+    /**
+     * 格式化注册时间显示
+     */
+    private String formatRegisterTime(String registerTime) {
+        if (registerTime == null || registerTime.isEmpty()) {
+            return "暂未获取";
+        }
+        try {
+            // 尝试解析为 long 时间戳（毫秒）
+            long timestamp = Long.parseLong(registerTime);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            return sdf.format(new Date(timestamp));
+        } catch (NumberFormatException e) {
+            // 如果不是时间戳，直接返回（可能已是格式化的日期）
+            return registerTime;
+        }
+    }
+
+    /**
+     * 从云端排行榜获取用户最高分
+     */
+    private void loadUserHighestScore() {
+        networkManager.getRankList("single", 2, new NetworkManager.OnResponseListener<>() {
+            @Override
+            public void onSuccess(List<ScoreRecord> rankList) {
+                runOnUiThread(() -> {
+                    int maxScore = 0;
+                    for (ScoreRecord record : rankList) {
+                        if (Config.getCurrentUserName().equals(record.getUserName())) {
+                            maxScore = Math.max(maxScore, record.getScore());
+                        }
+                    }
+                    ((TextView) findViewById(R.id.tv_stat_streak)).setText(String.valueOf(maxScore));
+                });
+            }
+
+            @Override
+            public void onFailure(String error) {
+                // 云端获取失败，使用本地最高分作为备用
+                runOnUiThread(() -> {
+                    List<ScoreRecord> localScores = scoreDao.getAllScores();
+                    int maxScore = localScores.isEmpty() ? 0 : localScores.get(0).getScore();
+                    ((TextView) findViewById(R.id.tv_stat_streak)).setText(String.valueOf(maxScore));
                 });
             }
         });
